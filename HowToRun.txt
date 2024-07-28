@@ -1,0 +1,8 @@
+// Replace the file FlLENAME with you .cpp file name and past this in your terminaa=l !!
+
+1- Compile
+g++ FILENAME.cpp -o FILENAME -I"C:\glfw-3.4.bin.WIN64\include" -I"C:\glew-2.1.0\include" -I"C:\glm-master\glm-master" -L"C:\glew-2.1.0\lib\Release\x64" -L"C:\glfw-3.4.bin.WIN64\lib-mingw-w64" -lglfw3dll -lglew32 -lopengl32
+
+2-Run
+
+.\FILENAME
