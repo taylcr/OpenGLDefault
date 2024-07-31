@@ -4,6 +4,7 @@
 #include <glm/gtc/matrix_transform.hpp>
 #include <glm/gtc/type_ptr.hpp>
 #include <iostream>
+#include <unordered_set>
 
 using namespace std;
 
@@ -41,39 +42,74 @@ void main()
         // Update the vertex shader to accept a transformation matrix.
         // 3. Apply Transformations:
 
-void processInput(GLFWwindow* window, glm::mat4& transform) {
+const unordered_set<int> validKeys = {
+    GLFW_KEY_W, GLFW_KEY_S, GLFW_KEY_A, GLFW_KEY_D,
+    GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_R, GLFW_KEY_F, GLFW_KEY_ESCAPE
+};
+
+bool processInput(GLFWwindow* window, glm::mat4& transform) {
+    bool validInput = false;
     float translationSpeed = 0.01f; // Speed of translation
     float rotationSpeed = glm::radians(30.0f); // 30 degrees rotation
     float scaleSpeed = 0.4f; // Scaling factor
 
-//TODO : IF OTHER INPUT SAY INVALID !!
-
     // Translation 
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
         transform = glm::translate(transform, glm::vec3(0.0f, translationSpeed, 0.0f));
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+        validInput = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS) {
         transform = glm::translate(transform, glm::vec3(0.0f, -translationSpeed, 0.0f));
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+        validInput = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS) {
         transform = glm::translate(transform, glm::vec3(-translationSpeed, 0.0f, 0.0f));
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+        validInput = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS) {
         transform = glm::translate(transform, glm::vec3(translationSpeed, 0.0f, 0.0f));
+        validInput = true;
+    }
 
     // Rotation 
-    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
         transform = glm::rotate(transform, rotationSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
-    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS)
+        validInput = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
         transform = glm::rotate(transform, -rotationSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
+        validInput = true;
+    }
 
     // Scaling 
-    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_R) == GLFW_PRESS) {
         transform = glm::scale(transform, glm::vec3(scaleSpeed, scaleSpeed, scaleSpeed));
-    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS)
+        validInput = true;
+    }
+    if (glfwGetKey(window, GLFW_KEY_F) == GLFW_PRESS) {
         transform = glm::scale(transform, glm::vec3(1/scaleSpeed, 1/scaleSpeed, 1/scaleSpeed));
+        validInput = true;
+    }
 
     // Close the window
-    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
+    if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
+        validInput = true;
+    }
+
+    // Check for invalid keys
+    if (!validInput) {
+        for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; ++key) {  //iterates over all possible key values from GLFW_KEY_SPACE to GLFW_KEY_LAST (GLFW)
+            if (glfwGetKey(window, key) == GLFW_PRESS && validKeys.find(key) == validKeys.end()) {
+                cout << "Invalid key pressed!" << endl;
+                break;
+            }
+        }
+    }
+
+    return validInput;
 }
+
 
 int main() {
     glfwInit();
