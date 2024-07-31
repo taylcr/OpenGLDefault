@@ -1,0 +1,66 @@
+
+
+ GLEW (OpenGL Extension Wrangler Library) is used to manage OpenGL extensions.
+ glfw3.h: GLFW is used for creating windows, contexts, and managing input.
+ glm.hpp: GLM (OpenGL Mathematics) is a header-only C++ library for graphics software based on the OpenGL Shading Language (GLSL) specifications.
+
+// 1-  Define the Vertex Shader and Fragment Shader:
+//     Create a simple vertex and fragment shader to render the shapes.
+
+Vertex and Fragment Shader Definitions:
+
+The  vertexShaderSource & fragmentShaderSource are shaders. aka programs that runs on the CPU 
+That allows the you to do simple modifications on the triangle in this case 
+
+vertexShaderSource : allows you to transform the vertecices, meaning transform the object 
+                    By changing it's position : gl_Position = transform * vec4(aPos, 1.0);
+fragmentShaderSource: allows you to change it's colors :  FragColor = vec4( );
+
+
+Transformation Handling : 
+
+void processInput(GLFWwindow* window, glm::mat4& transform) {}
+
+GLFWwindow* window --> allow to get key strokes -- > glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS
+
+main {
+
+1- initialize GLFW
+2- Create the Window
+3- set the curent context to this window
+4- initialise GLEW
+5- link both shaders the the program, Compile them and delete them
+
+6- create the triangle
+7-Generate and Bind the VAO
+
+8- Loading Vertex Data into VBO
+
+GL_ARRAY_BUFFER: Specifies the target buffer object.
+sizeof(vertices): Specifies the size in bytes of the buffer object's new data store.
+vertices: Specifies a pointer to the data that will be copied into the data store.
+GL_STATIC_DRAW: A usage hint to the OpenGL implementation. GL_STATIC_DRAW indicates that the data will be set once and used many times for drawing operations.
+
+
+9-Specifying the Layout of the Vertex Data
+
+2-*glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void)0)**: Defines an array of generic vertex attribute data.
+
+0: Specifies the index of the generic vertex attribute to be modified. This corresponds to layout (location = 0) in the vertex shader.
+3: Specifies the number of components per vertex attribute. In this case, each vertex has three components (x, y, z).
+GL_FLOAT: Specifies the data type of each component in the array. Here, each component is a floating-point value.
+GL_FALSE: Specifies whether fixed-point data values should be normalized. GL_FALSE means the values are not normalized.
+3 * sizeof(float): Specifies the byte offset between consecutive vertex attributes. Since the data is tightly packed, this is the size of three floats.
+(void)0*: Specifies a pointer to the first component of the first vertex attribute in the array. In this case, it's the start of the array.
+glEnableVertexAttribArray(0): Enables the generic vertex attribute array specified by 0. This makes the vertex attribute available for use in rendering.
+
+
+-Render Loop: Continues until the window should close.
+-Process Input: Handles user input and updates transformations.
+-Clear the Screen: Clears the screen to a specified color.
+-Set Transformation Matrix: Updates the transformation matrix uniform in the shader.
+-Draw the Triangle: Renders the triangle using the vertex data.
+-Swap Buffers and Poll Events: Updates the window with the rendered frame and processes any pending events.
+-Cleanup: Cleans up and terminates GLFW.
+
+}
