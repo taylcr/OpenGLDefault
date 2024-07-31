@@ -28,9 +28,9 @@ out vec4 FragColor;
 uniform float time;
 void main()
 {
-    float r = 0.5 * sin(time + 0.0) + 0.5;
-    float g = 0.5 * sin(time + 2.0) + 0.5;
-    float b = 0.5 * sin(time + 4.0) + 0.5;
+    float r = 0.5 * sin(time + 1.5) + 0.6;
+    float g = 0.5 * sin(time + 2.0) + 1.5;
+    float b = 0.5 * sin(time + 4.0) + 0.4;
     FragColor = vec4(r, g, b, 1.0);
 }
 )glsl";
@@ -44,14 +44,33 @@ void main()
 
 const unordered_set<int> validKeys = {
     GLFW_KEY_W, GLFW_KEY_S, GLFW_KEY_A, GLFW_KEY_D,
-    GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_R, GLFW_KEY_F, GLFW_KEY_ESCAPE
+    GLFW_KEY_Q, GLFW_KEY_E, GLFW_KEY_R, GLFW_KEY_F,GLFW_KEY_T, GLFW_KEY_ESCAPE
 };
 
+void printUI(){
+
+    cout << "\n------------- Control Commands --------------\n\n";
+    cout << "W: Move up\n";
+    cout << "S: Move down\n";
+    cout << "A: Move left\n";
+    cout << "D: Move right\n";
+    cout << "Q: Rotate counter-clockwise\n";
+    cout << "E: Rotate clockwise\n";
+    cout << "R: Scale up\n";
+    cout << "F: Scale down\n";
+    cout << "T: Reset position\n";
+    cout << "ESC: Close the window\n";
+    cout << "\n\n";
+    cout << "\n---------------------------------------------\n\n";
+
+}
 bool processInput(GLFWwindow* window, glm::mat4& transform) {
     bool validInput = false;
     float translationSpeed = 0.01f; // Speed of translation
     float rotationSpeed = glm::radians(30.0f); // 30 degrees rotation
-    float scaleSpeed = 0.4f; // Scaling factor
+    float scaleSpeed = 0.95f; // Scaling factor
+
+   // printUI();
 
     // Translation 
     if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS) {
@@ -73,10 +92,17 @@ bool processInput(GLFWwindow* window, glm::mat4& transform) {
 
     // Rotation 
     if (glfwGetKey(window, GLFW_KEY_Q) == GLFW_PRESS) {
+        // DELAY
+        float end = clock() / CLOCKS_PER_SEC + 0.41;
+	    while ((clock() / CLOCKS_PER_SEC) < end);
+
         transform = glm::rotate(transform, rotationSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
         validInput = true;
     }
     if (glfwGetKey(window, GLFW_KEY_E) == GLFW_PRESS) {
+        float end = clock() / CLOCKS_PER_SEC + 0.41;
+	    while ((clock() / CLOCKS_PER_SEC) < end);
+        
         transform = glm::rotate(transform, -rotationSpeed, glm::vec3(0.0f, 0.0f, 1.0f));
         validInput = true;
     }
@@ -91,6 +117,12 @@ bool processInput(GLFWwindow* window, glm::mat4& transform) {
         validInput = true;
     }
 
+     // Reset the triangle
+    if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS) {
+        transform = glm::mat4(1.0f);
+        validInput = true;
+    }
+
     // Close the window
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS) {
         glfwSetWindowShouldClose(window, true);
@@ -99,8 +131,9 @@ bool processInput(GLFWwindow* window, glm::mat4& transform) {
 
     // Check for invalid keys
     if (!validInput) {
-        for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; ++key) {  //iterates over all possible key values from GLFW_KEY_SPACE to GLFW_KEY_LAST (GLFW)
+        for (int key = GLFW_KEY_SPACE; key <= GLFW_KEY_LAST; ++key) { //iterates over all possible key values from GLFW_KEY_SPACE to GLFW_KEY_LAST (GLFW)
             if (glfwGetKey(window, key) == GLFW_PRESS && validKeys.find(key) == validKeys.end()) {
+                
                 cout << "Invalid key pressed!" << endl;
                 break;
             }
@@ -189,7 +222,7 @@ int main() {
          //give window state and transform
         processInput(window, transform);
 
-        glClearColor(0.529f, 0.808f, 0.980f, 1.0f);  // Sky blue color
+        glClearColor(0.42f, 0.74f, 0.92f, 0.7f);  // Sky blue color
         glClear(GL_COLOR_BUFFER_BIT);
 
         glUseProgram(shaderProgram);
