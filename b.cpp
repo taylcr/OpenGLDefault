@@ -365,7 +365,8 @@ int main() {
     // Load the Liberty Statue model
     std::vector<float> vertices, normals, texCoords;
     try {
-        loadModel("LibertyStatue.obj", vertices, normals, texCoords);  // Provide the correct path to your .obj file
+        loadModel("bottle.obj", vertices, normals, texCoords);  // Provide the correct path to your .obj file
+        //loadModel("LibertyStatue.obj", vertices, normals, texCoords);  // Provide the correct path to your .obj file
     } catch (const std::exception& e) {
         cout << "Error loading model: " << e.what() << endl;
         return -1;
@@ -422,7 +423,8 @@ int main() {
     glBindVertexArray(0);
 
     // Load the texture
-    unsigned int texture = loadTexture("texture.png");
+    //unsigned int texture = loadTexture("texture.png");
+    unsigned int texture = loadTexture("bottle.png");
     unsigned int planeTexture = loadTexture("grid_texture.png");  // Load a texture for the grid
 
     // Initialize model matrix
