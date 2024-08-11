@@ -11,3 +11,20 @@ RUN MAIN :
 
 g++ main.cpp -o main -I"C:\glfw-3.4.bin.WIN64\include" -I"C:\glew-2.1.0\include" -I"C:\glm-master" -L"C:\glew-2.1.0\lib\Release\x64" -L"C:\glfw-3.4.bin.WIN64\lib-mingw-w64" -lglfw3dll -lglew32 -lopengl32
 .\main
+
+
+
+
+
+
+
+
+
+
+
+
+
+g++ b.cpp tiny_obj_loader.cc -o b -I"C:\glfw-3.4.bin.WIN64\include" -I"C:\glew-2.1.0\include" -I"C:\glm-master" -I"C:\assimp-master\include" -I"C:\assimp-master\build\include" -L"C:\glew-2.1.0\lib\Release\x64" -L"C:\glfw-3.4.bin.WIN64\lib-mingw-w64" -L"C:\assimp-master\build\bin" -lglfw3dll -lglew32 -lopengl32 -lassimp-5
+
+.\b
+
