@@ -7,6 +7,9 @@
 #include <iostream>
 #include <vector>
 
+#define STB_IMAGE_IMPLEMENTATION
+#include "stb_image.h"
+
 using namespace std;
 
 // Camera variables
@@ -27,6 +30,11 @@ void framebuffer_size_callback(GLFWwindow* window, int width, int height) {
 }
 
 void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
+    // Check if the right mouse button is pressed
+    if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
+        return; // Do nothing, prevent camera movement
+    }
+
     if (firstMouse) {
         lastX = xpos;
         lastY = ypos;
@@ -60,7 +68,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
 
 void processInput(GLFWwindow* window, glm::mat4 &model) {
     float cameraSpeed = 3.0f * deltaTime;  // Adjust speed here
-    float rotationSpeed = glm::radians(30.0f) * deltaTime;  // Rotation speed
+    float rotationSpeed = glm::radians(80.0f) * deltaTime;  // Rotation speed
     float scaleSpeed = 1.0f + 0.5f * deltaTime;  // Scaling factor
 
     if (glfwGetMouseButton(window, GLFW_MOUSE_BUTTON_RIGHT) == GLFW_PRESS) {
@@ -99,25 +107,25 @@ void processInput(GLFWwindow* window, glm::mat4 &model) {
         // Reset (T)
         if (glfwGetKey(window, GLFW_KEY_T) == GLFW_PRESS)
             model = glm::mat4(1.0f);  // Reset to identity matrix
+    } else {
+        // Camera controls (for normal movement)
+        if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
+            cameraPos += cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
+            cameraPos -= cameraSpeed * cameraFront;
+        if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
+            cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+        if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
+            cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
+
+        // Move up
+        if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
+            cameraPos += cameraSpeed * cameraUp;
+
+        // Move down
+        if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
+            cameraPos -= cameraSpeed * cameraUp;
     }
-
-    // Camera controls (for normal movement)
-    if (glfwGetKey(window, GLFW_KEY_W) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_S) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraFront;
-    if (glfwGetKey(window, GLFW_KEY_A) == GLFW_PRESS)
-        cameraPos -= glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-    if (glfwGetKey(window, GLFW_KEY_D) == GLFW_PRESS)
-        cameraPos += glm::normalize(glm::cross(cameraFront, cameraUp)) * cameraSpeed;
-
-    // Move up
-    if (glfwGetKey(window, GLFW_KEY_SPACE) == GLFW_PRESS)
-        cameraPos += cameraSpeed * cameraUp;
-
-    // Move down
-    if (glfwGetKey(window, GLFW_KEY_LEFT_SHIFT) == GLFW_PRESS)
-        cameraPos -= cameraSpeed * cameraUp;
 
     // Close window on ESC key press
     if (glfwGetKey(window, GLFW_KEY_ESCAPE) == GLFW_PRESS)
@@ -129,9 +137,11 @@ const char* vertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 aPos;
 layout (location = 1) in vec3 aNormal;
+layout (location = 2) in vec2 aTexCoord;
 
 out vec3 FragPos;
 out vec3 Normal;
+out vec2 TexCoord;
 
 uniform mat4 model;
 uniform mat4 view;
@@ -141,6 +151,7 @@ void main()
 {
     FragPos = vec3(model * vec4(aPos, 1.0));
     Normal = mat3(transpose(inverse(model))) * aNormal;  
+    TexCoord = aTexCoord;
     gl_Position = projection * view * vec4(FragPos, 1.0);
 }
 )glsl";
@@ -152,10 +163,10 @@ out vec4 FragColor;
 
 in vec3 FragPos;
 in vec3 Normal;
+in vec2 TexCoord;
 
 struct Material {
-    vec3 ambient;
-    vec3 diffuse;
+    sampler2D diffuse;
     vec3 specular;
     float shininess;
 }; 
@@ -174,13 +185,13 @@ uniform vec3 viewPos;
 void main()
 {
     // Ambient
-    vec3 ambient = light.ambient * material.ambient;
+    vec3 ambient = light.ambient * vec3(texture(material.diffuse, TexCoord));
     
     // Diffuse 
     vec3 norm = normalize(Normal);
     vec3 lightDir = normalize(light.position - FragPos);
     float diff = max(dot(norm, lightDir), 0.0);
-    vec3 diffuse = light.diffuse * (diff * material.diffuse);
+    vec3 diffuse = light.diffuse * (diff * vec3(texture(material.diffuse, TexCoord)));
     
     // Specular
     vec3 viewDir = normalize(viewPos - FragPos);
@@ -210,7 +221,40 @@ unsigned int loadShader(const char* source, GLenum type) {
     return shader;
 }
 
-void loadModel(const std::string& path, std::vector<float>& vertices, std::vector<float>& normals) {
+unsigned int loadTexture(const char* path) {
+    unsigned int textureID;
+    glGenTextures(1, &textureID);
+
+    int width, height, nrComponents;
+    unsigned char *data = stbi_load(path, &width, &height, &nrComponents, 0);
+    if (data) {
+        GLenum format;
+        if (nrComponents == 1)
+            format = GL_RED;
+        else if (nrComponents == 3)
+            format = GL_RGB;
+        else if (nrComponents == 4)
+            format = GL_RGBA;
+
+        glBindTexture(GL_TEXTURE_2D, textureID);
+        glTexImage2D(GL_TEXTURE_2D, 0, format, width, height, 0, format, GL_UNSIGNED_BYTE, data);
+        glGenerateMipmap(GL_TEXTURE_2D);
+
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_REPEAT);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
+        glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+
+        stbi_image_free(data);
+    } else {
+        std::cout << "Failed to load texture" << std::endl;
+        stbi_image_free(data);
+    }
+
+    return textureID;
+}
+
+void loadModel(const std::string& path, std::vector<float>& vertices, std::vector<float>& normals, std::vector<float>& texCoords) {
     tinyobj::attrib_t attrib;
     std::vector<tinyobj::shape_t> shapes;
     std::vector<tinyobj::material_t> materials;
@@ -226,11 +270,54 @@ void loadModel(const std::string& path, std::vector<float>& vertices, std::vecto
             vertices.push_back(attrib.vertices[3 * index.vertex_index + 1]);
             vertices.push_back(attrib.vertices[3 * index.vertex_index + 2]);
 
-            normals.push_back(attrib.normals[3 * index.normal_index + 0]);
-            normals.push_back(attrib.normals[3 * index.normal_index + 1]);
-            normals.push_back(attrib.normals[3 * index.normal_index + 2]);
+            if (!attrib.normals.empty()) {
+                normals.push_back(attrib.normals[3 * index.normal_index + 0]);
+                normals.push_back(attrib.normals[3 * index.normal_index + 1]);
+                normals.push_back(attrib.normals[3 * index.normal_index + 2]);
+            }
+
+            if (!attrib.texcoords.empty()) {
+                texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 0]);
+                texCoords.push_back(attrib.texcoords[2 * index.texcoord_index + 1]);
+            }
         }
     }
+}
+
+void createPlane(std::vector<float>& vertices, std::vector<float>& normals, std::vector<float>& texCoords) {
+    float planeVertices[] = {
+        // positions          // normals           // texture coords
+         5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f,    1.0f, 1.0f,
+        -5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f,    0.0f, 1.0f,
+        -5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,    0.0f, 0.0f,
+
+         5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f,    1.0f, 1.0f,
+        -5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,    0.0f, 0.0f,
+         5.0f, 0.0f, -5.0f,   0.0f, 1.0f, 0.0f,    1.0f, 0.0f
+    };
+
+    // Insert vertices, normals, and texture coordinates into their respective vectors
+    vertices.insert(vertices.end(), std::begin(planeVertices), std::end(planeVertices));
+
+    // Normals (all facing upwards)
+    normals.insert(normals.end(), {
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f,
+        0.0f, 1.0f, 0.0f
+    });
+
+    // Texture coordinates
+    texCoords.insert(texCoords.end(), {
+        1.0f, 1.0f,
+        0.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 1.0f,
+        0.0f, 0.0f,
+        1.0f, 0.0f
+    });
 }
 
 int main() {
@@ -244,7 +331,7 @@ int main() {
     glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 3);
     glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
 
-    GLFWwindow* window = glfwCreateWindow(800, 600, "Display Bugatti", NULL, NULL);
+    GLFWwindow* window = glfwCreateWindow(800, 600, "3D Scene with Plane", NULL, NULL);
     if (!window) {
         cout << "Failed to create GLFW window" << endl;
         glfwTerminate();
@@ -275,19 +362,24 @@ int main() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Load the Bugatti model
-    std::vector<float> vertices, normals;
+    // Load the Liberty Statue model
+    std::vector<float> vertices, normals, texCoords;
     try {
-        loadModel("LibertyStatue.obj", vertices, normals);  // Provide the correct path to your .obj file
+        loadModel("LibertyStatue.obj", vertices, normals, texCoords);  // Provide the correct path to your .obj file
     } catch (const std::exception& e) {
         cout << "Error loading model: " << e.what() << endl;
         return -1;
     }
 
-    unsigned int VBO, VAO, NBO;
+    // Create a plane (grid) for the floor
+    std::vector<float> planeVertices, planeNormals, planeTexCoords;
+    createPlane(planeVertices, planeNormals, planeTexCoords);
+
+    unsigned int VAO, VBO, NBO, TBO;
     glGenVertexArrays(1, &VAO);
     glGenBuffers(1, &VBO);
     glGenBuffers(1, &NBO);
+    glGenBuffers(1, &TBO);
 
     glBindVertexArray(VAO);
 
@@ -296,16 +388,46 @@ int main() {
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(0);
 
-    glBindBuffer(GL_ARRAY_BUFFER, NBO);
-    glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
-    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+    if (!normals.empty()) {
+        glBindBuffer(GL_ARRAY_BUFFER, NBO);
+        glBufferData(GL_ARRAY_BUFFER, normals.size() * sizeof(float), normals.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 3 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(1);
+    }
+
+    if (!texCoords.empty()) {
+        glBindBuffer(GL_ARRAY_BUFFER, TBO);
+        glBufferData(GL_ARRAY_BUFFER, texCoords.size() * sizeof(float), texCoords.data(), GL_STATIC_DRAW);
+        glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 2 * sizeof(float), (void*)0);
+        glEnableVertexAttribArray(2);
+    }
+
+    unsigned int planeVAO, planeVBO;
+    glGenVertexArrays(1, &planeVAO);
+    glGenBuffers(1, &planeVBO);
+
+    glBindVertexArray(planeVAO);
+
+    glBindBuffer(GL_ARRAY_BUFFER, planeVBO);
+    glBufferData(GL_ARRAY_BUFFER, planeVertices.size() * sizeof(float), planeVertices.data(), GL_STATIC_DRAW);
+    glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)0);
+    glEnableVertexAttribArray(0);
+
+    glVertexAttribPointer(1, 3, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(3 * sizeof(float)));
     glEnableVertexAttribArray(1);
 
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, 8 * sizeof(float), (void*)(6 * sizeof(float)));
+    glEnableVertexAttribArray(2);
+
     glBindVertexArray(0);
+
+    // Load the texture
+    unsigned int texture = loadTexture("texture.png");
+    unsigned int planeTexture = loadTexture("grid_texture.png");  // Load a texture for the grid
 
     // Initialize model matrix
     glm::mat4 model = glm::mat4(1.0f);
+    glm::mat4 planeModel = glm::mat4(1.0f);
 
     // Main render loop
     while (!glfwWindowShouldClose(window)) {
@@ -330,11 +452,6 @@ int main() {
         glUniform3f(glGetUniformLocation(shaderProgram, "light.diffuse"), 0.5f, 0.5f, 0.5f);
         glUniform3f(glGetUniformLocation(shaderProgram, "light.specular"), 1.0f, 1.0f, 1.0f);
 
-        glUniform3f(glGetUniformLocation(shaderProgram, "material.ambient"), 1.0f, 0.5f, 0.31f);
-        glUniform3f(glGetUniformLocation(shaderProgram, "material.diffuse"), 1.0f, 0.5f, 0.31f);
-        glUniform3f(glGetUniformLocation(shaderProgram, "material.specular"), 0.5f, 0.5f, 0.5f); // Specular highlight
-        glUniform1f(glGetUniformLocation(shaderProgram, "material.shininess"), 32.0f);
-
         glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
         // Adjust the view and projection matrices
@@ -346,14 +463,24 @@ int main() {
         unsigned int viewLoc = glGetUniformLocation(shaderProgram, "view");
         unsigned int projectionLoc = glGetUniformLocation(shaderProgram, "projection");
 
-        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glUniformMatrix4fv(viewLoc, 1, GL_FALSE, glm::value_ptr(view));
         glUniformMatrix4fv(projectionLoc, 1, GL_FALSE, glm::value_ptr(projection));
 
+        // Bind and draw the plane
+        glBindTexture(GL_TEXTURE_2D, planeTexture);
+        glUniform1i(glGetUniformLocation(shaderProgram, "material.diffuse"), 0);
+        glUniform3f(glGetUniformLocation(shaderProgram, "material.specular"), 0.5f, 0.5f, 0.5f);
+        glUniform1f(glGetUniformLocation(shaderProgram, "material.shininess"), 32.0f);
+
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(planeModel));
+        glBindVertexArray(planeVAO);
+        glDrawArrays(GL_TRIANGLES, 0, 6);
+
         // Bind and draw the model
+        glBindTexture(GL_TEXTURE_2D, texture);
+        glUniformMatrix4fv(modelLoc, 1, GL_FALSE, glm::value_ptr(model));
         glBindVertexArray(VAO);
         glDrawArrays(GL_TRIANGLES, 0, vertices.size() / 3);
-        glBindVertexArray(0);
 
         // Swap buffers and poll events
         glfwSwapBuffers(window);
@@ -363,6 +490,10 @@ int main() {
     glDeleteVertexArrays(1, &VAO);
     glDeleteBuffers(1, &VBO);
     glDeleteBuffers(1, &NBO);
+    glDeleteBuffers(1, &TBO);
+
+    glDeleteVertexArrays(1, &planeVAO);
+    glDeleteBuffers(1, &planeVBO);
 
     glfwTerminate();
     return 0;
