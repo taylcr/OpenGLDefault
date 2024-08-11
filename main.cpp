@@ -35,6 +35,16 @@ void main()
 }
 )glsl";
 
+
+// const char* fragmentShaderSource = R"glsl(
+// #version 330 core
+// out vec4 FragColor;
+// void main()
+// {
+//     FragColor = vec4(0.0, 0.0, 1.0, 1.0); // Solid blue color
+// }
+// )glsl";
+
 // Step 3: Applying Transformations
         // 1. Create Transformation Matrices:
         // Use GLM (OpenGL Mathematics) library to create transformation matrices.
@@ -66,6 +76,7 @@ void printUI(){
 }
 bool processInput(GLFWwindow* window, glm::mat4& transform) {
     bool validInput = false;
+    
     float translationSpeed = 0.01f; // Speed of translation
     float rotationSpeed = glm::radians(30.0f); // 30 degrees rotation
     float scaleSpeed = 0.95f; // Scaling factor
@@ -197,8 +208,7 @@ int main() {
     };
 
 //4. Set Up the Vertex Array Object (VAO), Vertex Buffer Object (VBO), and Element Buffer Object (EBO):
-        //Low Vertex Count so no EBO
-
+    //Low Vertex Count so no EBO
     unsigned int VBO, VAO;
     glGenVertexArrays(1, &VAO); //Generate and Bind VAO
     glGenBuffers(1, &VBO);   // able to Stores one triangle object
