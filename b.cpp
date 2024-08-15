@@ -12,7 +12,7 @@
 
 using namespace std;
 
-// Camera variables
+// Camera variables ( for lookAt(eye, at, up ))  
 glm::vec3 cameraPos = glm::vec3(0.0f, 0.0f, 3.0f);
 glm::vec3 cameraFront = glm::vec3(0.0f, 0.0f, -1.0f);
 glm::vec3 cameraUp = glm::vec3(0.0f, 1.0f, 0.0f);
@@ -35,6 +35,8 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
         return; // Do nothing, prevent camera movement
     }
 
+ //to prevent sudden jumps in camera orientation the first time the mouse moves, ensuring smooth camera control from the start.
+   
     if (firstMouse) {
         lastX = xpos;
         lastY = ypos;
@@ -50,6 +52,9 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     xoffset *= sensitivity;
     yoffset *= sensitivity;
 
+   //Yaw =rotation around the Y-axis, horizontal movement) is increased by xoffset
+   //Pitch = rotation around the X-axis, vertical movement) is increased by yoffset
+
     yaw += xoffset;
     pitch += yoffset;
 
@@ -59,6 +64,7 @@ void mouse_callback(GLFWwindow* window, double xpos, double ypos) {
     if (pitch < -89.0f)
         pitch = -89.0f;
 
+    //converting the yaw and pitch angles from degrees to radians
     glm::vec3 front;
     front.x = cos(glm::radians(yaw)) * cos(glm::radians(pitch));
     front.y = sin(glm::radians(pitch));
@@ -133,6 +139,11 @@ void processInput(GLFWwindow* window, glm::mat4 &model) {
 }
 
 // Vertex Shader Source Code
+
+//uniform mat4 model;: The model matrix transforms the vertices from their local object space to world space. It applies transformations such as translation, rotation, and scaling to the vertices.
+// uniform mat4 view;: The view matrix transforms the vertices from world space to camera (or view) space. It represents the camera's position and orientation in the scene.
+// uniform mat4 projection;: The projection matrix transforms the vertices from camera space to clip space, where they can be rendered. It applies perspective or orthographic projection, which determines how 3D objects are projected onto the 2D screen.
+
 const char* vertexShaderSource = R"glsl(
 #version 330 core
 layout (location = 0) in vec3 aPos;
@@ -149,14 +160,15 @@ uniform mat4 projection;
 
 void main()
 {
-    FragPos = vec3(model * vec4(aPos, 1.0));
-    Normal = mat3(transpose(inverse(model))) * aNormal;  
-    TexCoord = aTexCoord;
-    gl_Position = projection * view * vec4(FragPos, 1.0);
+    FragPos = vec3(model * vec4(aPos, 1.0));                 // Object space -> World space
+    Normal = mat3(transpose(inverse(model))) * aNormal;     // Normal transformation for lighting
+    TexCoord = aTexCoord;                                  // World space -> Clip space (screen space)
+    gl_Position = projection * view * vec4(FragPos, 1.0); // Passes texture coordinates to fragment shader
 }
 )glsl";
 
 // Fragment Shader Source Code
+//ADSA
 const char* fragmentShaderSource = R"glsl(
 #version 330 core
 out vec4 FragColor;
@@ -285,6 +297,7 @@ void loadModel(const std::string& path, std::vector<float>& vertices, std::vecto
 }
 
 void createPlane(std::vector<float>& vertices, std::vector<float>& normals, std::vector<float>& texCoords) {
+         // 2 trianlge put together
     float planeVertices[] = {
         // positions          // normals           // texture coords
          5.0f, 0.0f,  5.0f,   0.0f, 1.0f, 0.0f,    1.0f, 1.0f,
@@ -362,7 +375,7 @@ int main() {
     glDeleteShader(vertexShader);
     glDeleteShader(fragmentShader);
 
-    // Load the Liberty Statue model
+    // Load the  model
     std::vector<float> vertices, normals, texCoords;
     try {
         loadModel("bottle.obj", vertices, normals, texCoords);  // Provide the correct path to your .obj file
@@ -453,6 +466,7 @@ int main() {
         glUniform3f(glGetUniformLocation(shaderProgram, "light.ambient"), 0.2f, 0.2f, 0.2f);
         glUniform3f(glGetUniformLocation(shaderProgram, "light.diffuse"), 0.5f, 0.5f, 0.5f);
         glUniform3f(glGetUniformLocation(shaderProgram, "light.specular"), 1.0f, 1.0f, 1.0f);
+
 
         glUniform3f(glGetUniformLocation(shaderProgram, "viewPos"), cameraPos.x, cameraPos.y, cameraPos.z);
 
